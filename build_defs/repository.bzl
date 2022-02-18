@@ -27,11 +27,13 @@ def load_j2cl_repo_deps():
         sha256 = "64ad2728ccdd2044216e4cec7815918b7bb3bb28c95b7e9d951f9d4eccb07625",
     )
 
-    _github_repo(
+    rules_kotlin_version = "v1.5.0"  # v1.5.0
+    rules_kotlin_sha = "12d22a3d9cbcf00f2e2d8f0683ba87d3823cb8c7f6837568dd7e48846e023307"
+
+    http_archive(
         name = "io_bazel_rules_kotlin",
-        repo = "bazelbuild/rules_kotlin",
-        tag = "legacy-1.3.0-rc3",
-        sha256 = "54678552125753d9fc0a37736d140f1d2e69778d3e52cf454df41a913b964ede",
+        urls = ["https://github.com/bazelbuild/rules_kotlin/releases/download/%s/rules_kotlin_release.tgz" % rules_kotlin_version],
+        sha256 = rules_kotlin_sha,
     )
 
     # Add other closure repo deps that need to loaded beforehand.
