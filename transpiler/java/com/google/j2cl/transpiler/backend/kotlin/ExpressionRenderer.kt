@@ -125,8 +125,28 @@ private fun Renderer.renderCastExpression(expression: CastExpression) {
 }
 
 private fun Renderer.renderBinaryOperator(operator: BinaryOperator) {
-  render(operator.symbol)
+  render(operator.ktSymbol)
 }
+
+private val BinaryOperator.ktSymbol
+  get() =
+    when (this) {
+      BinaryOperator.TIMES -> "*"
+      BinaryOperator.DIVIDE -> "/"
+      BinaryOperator.REMAINDER -> "%"
+      BinaryOperator.PLUS -> "+"
+      BinaryOperator.MINUS -> "-"
+      BinaryOperator.LESS -> "<"
+      BinaryOperator.GREATER -> ">"
+      BinaryOperator.LESS_EQUALS -> "<="
+      BinaryOperator.GREATER_EQUALS -> ">="
+      BinaryOperator.EQUALS -> "==="
+      BinaryOperator.NOT_EQUALS -> "!=="
+      BinaryOperator.CONDITIONAL_AND -> "&&"
+      BinaryOperator.CONDITIONAL_OR -> "||"
+      BinaryOperator.ASSIGN -> "="
+      else -> throw InternalCompilerError("$this.ktSymbol")
+    }
 
 private fun Renderer.renderExpressionWithComment(expressionWithComment: ExpressionWithComment) {
   // Comments do not count as operations, but parenthesis will be emitted by the
@@ -141,7 +161,10 @@ private fun Renderer.renderFieldAccess(fieldAccess: FieldAccess) {
 }
 
 private fun Renderer.renderFunctionExpression(functionExpression: FunctionExpression) {
-  renderTypeDescriptor(functionExpression.typeDescriptor.functionalInterface!!.toNonNullable())
+  renderTypeDescriptor(
+    functionExpression.typeDescriptor.functionalInterface!!.toNonNullable(),
+    projectBounds = true
+  )
   render(" ")
   renderInParentheses {
     render("fun")
@@ -219,14 +242,25 @@ private fun Renderer.renderMethodCall(expression: MethodCall) {
 
 internal fun Renderer.renderInvocationArguments(invocation: Invocation) {
   renderInParentheses {
-    val parameters = invocation.target.parameterDescriptors.zip(invocation.arguments)
-    renderCommaSeparated(parameters) { (parameterDescriptor, argument) ->
-      // TODO(b/216523245): Handle spread operator using a pass in the AST.
-      if (parameterDescriptor.isVarargs) {
-        render("*")
-        renderInParentheses { renderExpression(argument) }
-      } else {
-        renderExpression(argument)
+    // Take last argument if it's an array literal passed as a vararg parameter.
+    val varargArrayLiteral =
+      (invocation.arguments.lastOrNull() as? ArrayLiteral).takeIf {
+        invocation.target.parameterDescriptors.lastOrNull()?.isVarargs == true
+      }
+
+    if (varargArrayLiteral != null) {
+      val expandedArguments = invocation.arguments.dropLast(1) + varargArrayLiteral.valueExpressions
+      renderCommaSeparated(expandedArguments) { renderExpression(it) }
+    } else {
+      val parameters = invocation.target.parameterDescriptors.zip(invocation.arguments)
+      renderCommaSeparated(parameters) { (parameterDescriptor, argument) ->
+        // TODO(b/216523245): Handle spread operator using a pass in the AST.
+        if (parameterDescriptor.isVarargs) {
+          render("*")
+          renderInParentheses { renderExpression(argument) }
+        } else {
+          renderExpression(argument)
+        }
       }
     }
   }
@@ -242,15 +276,11 @@ private fun Renderer.renderMultiExpression(multiExpression: MultiExpression) {
 }
 
 private fun Renderer.renderNewArray(newArray: NewArray) {
-  val literalOrNull = newArray.arrayLiteral
-  if (literalOrNull != null) {
-    renderArrayLiteral(literalOrNull)
-  } else {
-    renderNewArrayOfSize(
-      newArray.typeDescriptor.componentTypeDescriptor!!,
-      newArray.dimensionExpressions.first()
-    )
-  }
+  require(newArray.arrayLiteral == null)
+  renderNewArrayOfSize(
+    newArray.typeDescriptor.componentTypeDescriptor!!,
+    newArray.dimensionExpressions.first()
+  )
 }
 
 private fun Renderer.renderNewArrayOfSize(
@@ -350,7 +380,7 @@ private fun Renderer.renderThisReference(thisReference: ThisReference) {
 
 private fun Renderer.renderLabelReference(typeDescriptor: DeclaredTypeDescriptor) {
   render("@")
-  renderIdentifier(typeDescriptor.typeDeclaration.classComponents.last())
+  renderIdentifier(typeDescriptor.typeDeclaration.simpleSourceName)
 }
 
 private fun Renderer.renderVariableDeclarationExpression(

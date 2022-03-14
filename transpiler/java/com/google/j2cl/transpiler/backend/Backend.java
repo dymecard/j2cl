@@ -75,6 +75,7 @@ import com.google.j2cl.transpiler.passes.MoveNestedClassesToTop;
 import com.google.j2cl.transpiler.passes.MoveVariableDeclarationsToEnclosingBlock;
 import com.google.j2cl.transpiler.passes.NormalizationPass;
 import com.google.j2cl.transpiler.passes.NormalizeArrayCreations;
+import com.google.j2cl.transpiler.passes.NormalizeArrayCreationsKotlin;
 import com.google.j2cl.transpiler.passes.NormalizeArrayCreationsWasm;
 import com.google.j2cl.transpiler.passes.NormalizeArrayLiterals;
 import com.google.j2cl.transpiler.passes.NormalizeBasicCasts;
@@ -83,7 +84,6 @@ import com.google.j2cl.transpiler.passes.NormalizeCatchClauses;
 import com.google.j2cl.transpiler.passes.NormalizeConstructors;
 import com.google.j2cl.transpiler.passes.NormalizeEnumClasses;
 import com.google.j2cl.transpiler.passes.NormalizeEquality;
-import com.google.j2cl.transpiler.passes.NormalizeEqualityKotlin;
 import com.google.j2cl.transpiler.passes.NormalizeFieldInitialization;
 import com.google.j2cl.transpiler.passes.NormalizeFieldInitializationKotlin;
 import com.google.j2cl.transpiler.passes.NormalizeForEachStatement;
@@ -393,11 +393,14 @@ public enum Backend {
           VerifyReferenceScoping::new,
 
           // Normalizations
+          NormalizeArrayCreationsKotlin::new,
           NormalizeStaticMemberQualifiers::new,
           () -> new MoveVariableDeclarationsToEnclosingBlock(/* fromSwitchStatementsOnly= */ true),
           NormalizeMultiExpressions::new,
           () -> new ExpandCompoundAssignments(/* expandAll= */ true),
           RewriteAssignmentExpressions::new,
+          () -> new InsertUnboxingConversions(/* areBooleanAndDoubleBoxed= */ true),
+          () -> new InsertBoxingConversions(/* areBooleanAndDoubleBoxed= */ true),
           NormalizeLiteralsKotlin::new,
           NormalizeFieldInitializationKotlin::new,
           NormalizeLabels::new,
@@ -412,7 +415,6 @@ public enum Backend {
           InsertExplicitArrayCoercionCasts::new,
           ImplementKotlinBitLevelOperators::new,
           InsertNotNullAssertions::new,
-          NormalizeEqualityKotlin::new,
 
           // Needs to run after non-null assertions are inserted.
           InsertStringConversionsKotlin::new,

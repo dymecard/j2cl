@@ -9,7 +9,7 @@ enum class Enum1 {
 enum class Enum2 {
  VALUE1(2),
  VALUE2(enums.Enum1.V1),
- VALUE3(*(arrayOf<kotlin.Any?>())),
+ VALUE3(),
  VALUE4(5) {};
 
  @kotlin.jvm.JvmField internal var foo: Int = (enums.Enum1.V1 as java.lang.Enum<enums.Enum1?>).ordinal()
@@ -34,7 +34,7 @@ enum class Enum2 {
 
 enum class Enum3 {
  VALUE1(java.util.function.Function<kotlin.Int?, kotlin.Int?> (fun(v: kotlin.Int?): kotlin.Int? {
-  return 1 + v!!
+  return java.lang.Integer.valueOf(1 + (v!! as java.lang.Integer).intValue())
  }));
 
  constructor(function: java.util.function.Function<kotlin.Int?, kotlin.Int?>?)
